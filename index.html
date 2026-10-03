@@ -3,43 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione Spese con IA & Firebase</title>
+  <title>Gestione Spese & Guadagni con IA</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-  <script>
-    // ⚠️ SOSTITUISCI CON LE TUE CHIAVI FIREBASE
-    const firebaseConfig = {
-  apiKey: "AIzaSyCqM_2gyZ7-Mkwl8mVAKt3e8lv-0JjiZ6M",
-  authDomain: "miogestionalespese.firebaseapp.com",
-  projectId: "miogestionalespese",
-  storageBucket: "miogestionalespese.firebasestorage.app",
-  messagingSenderId: "22564262005",
-  appId: "1:22564262005:web:c1ecc1360ca70defe9283c"
-};
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-  </script>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans pb-12">
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans pb-12">
 
+  <!-- Header -->
   <header class="bg-indigo-600 text-white p-4 shadow-md mb-6">
     <div class="max-w-4xl mx-auto flex justify-between items-center">
       <h1 class="text-xl font-bold flex items-center gap-2">
-        <span>📸</span> Gestione Spese IA & Firestore
+        <span>💰</span> Gestione Spese & Guadagni AI
       </h1>
-      <span id="sync-status" class="text-xs bg-indigo-700 px-3 py-1 rounded-full border border-indigo-500">Inizializzazione...</span>
+      <button onclick="clearAllData()" class="text-xs bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg border border-indigo-500 transition">
+        Reset Dati
+      </button>
     </div>
   </header>
 
   <main class="max-w-4xl mx-auto px-4 space-y-6">
 
-    <!-- Totali -->
+    <!-- Schede Riassuntive -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <p class="text-xs text-slate-500 uppercase font-semibold">Entrate Totali</p>
@@ -55,28 +39,28 @@
       </div>
     </div>
 
-    <!-- Modulo Scansione Scontrini (OCR) -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 bg-indigo-50/30">
+    <!-- Sezione Scansione Scontrino con IA -->
+    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-md">
       <div class="flex items-center justify-between mb-2">
-        <h2 class="text-lg font-semibold text-indigo-900 flex items-center gap-2">
-          ⚡ Scansiona Scontrino con IA
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <span>📷</span> Scansiona Scontrino (OCR & IA)
         </h2>
-        <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-medium">Lettura Automatica</span>
+        <span class="text-xs bg-white/20 px-2 py-1 rounded text-white font-medium">Gemini AI</span>
       </div>
-      <p class="text-sm text-slate-600 mb-4">Carica la foto di uno scontrino: l'IA estrarrà importo, data, nome del negozio e categorizzerà la spesa al posto tuo.</p>
+      <p class="text-sm opacity-90 mb-4">Fai una foto allo scontrino o caricane un'immagine per estrarre in automatico importo, descrizione e categoria.</p>
       
       <div class="flex flex-wrap gap-3 items-center">
-        <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2">
-          📷 Scatta o Scegli Foto
-          <input type="file" id="receipt-input" accept="image/*" capture="environment" onchange="processReceipt(event)" class="hidden">
+        <label class="cursor-pointer bg-white text-indigo-700 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-sm font-semibold transition shadow flex items-center gap-2">
+          <span>📤</span> Carica / Scatta Foto
+          <input type="file" id="receipt-file" accept="image/*" capture="environment" onchange="handleReceiptScan(event)" class="hidden">
         </label>
-        <span id="ocr-status" class="text-sm text-slate-500 italic"></span>
+        <span id="ocr-status" class="text-sm italic font-medium"></span>
       </div>
     </div>
 
     <!-- Form Aggiunta Movimento -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h2 class="text-lg font-semibold mb-4 text-slate-700">Inserisci / Conferma Movimento</h2>
+      <h2 class="text-lg font-semibold mb-4 text-slate-700">Nuovo Movimento</h2>
       <form id="transaction-form" onsubmit="addTransaction(event)" class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           
@@ -94,12 +78,17 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Descrizione / Esercente</label>
-            <input type="text" id="description" onblur="autoCategorize()" required placeholder="Es. Conad, Rifornimento Eni, Stipendio" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            <label class="block text-sm font-medium text-slate-600 mb-1">Descrizione</label>
+            <div class="relative">
+              <input type="text" id="description" onblur="autoCategorize()" required placeholder="Es. Conad, Rifornimento Eni..." class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+              <button type="button" onclick="autoCategorize()" class="absolute right-2 top-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2 py-1 rounded border border-indigo-200">
+                ✨ Categorizza
+              </button>
+            </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Categoria (Auto-suggerita)</label>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Categoria</label>
             <select id="category" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
               <option value="Alimentari">Alimentari</option>
               <option value="Casa & Bollette">Casa & Bollette</option>
@@ -116,8 +105,8 @@
           </div>
         </div>
 
-        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg shadow transition">
-          Salva su Firestore
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg shadow transition">
+          Salva Movimento
         </button>
       </form>
     </div>
@@ -133,9 +122,8 @@
       </div>
 
       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 md:col-span-2">
-        <h3 class="text-md font-semibold mb-4 text-slate-700">Storico Movimenti (Firestore)</h3>
-        <div id="loading" class="text-center py-6 text-slate-400">Caricamento in corso...</div>
-        <div id="empty-state" class="hidden text-center py-6 text-slate-400">Nessun movimento presente.</div>
+        <h3 class="text-md font-semibold mb-4 text-slate-700">Storico Movimenti</h3>
+        <div id="empty-state" class="text-center py-8 text-slate-400">Nessun movimento presente. Aggiungine uno!</div>
         
         <ul id="transaction-list" class="divide-y divide-slate-100 max-h-96 overflow-y-auto"></ul>
       </div>
@@ -146,26 +134,20 @@
 
   <script>
     document.getElementById('date').valueAsDate = new Date();
+    
+    // ARRAY DATI COMPLETAMENTE VUOTO ALL'INIZIO
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
     let chartInstance = null;
 
-    // Regole per categorizzazione automatica istantanea
-    function autoCategorize() {
-      const desc = document.getElementById('description').value.toLowerCase();
-      const type = document.getElementById('type').value;
-      const catSelect = document.getElementById('category');
+    function saveAndRender() {
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+      renderApp();
+    }
 
-      if (!desc || type === 'guadagno') return;
-
-      if (desc.includes('superm') || desc.includes('coop') || desc.includes('conad') || desc.includes('esselunga') || desc.includes('spesa') || desc.includes('lidl')) {
-        catSelect.value = 'Alimentari';
-      } else if (desc.includes('eni') || desc.includes('q8') || desc.includes('benzina') || desc.includes('treno') || desc.includes('metro') || desc.includes('parking')) {
-        catSelect.value = 'Trasporti';
-      } else if (desc.includes('ristorante') || desc.includes('pizzeria') || desc.includes('bar') || desc.includes('cinema') || desc.includes('pub')) {
-        catSelect.value = 'Svago & Ristorazione';
-      } else if (desc.includes('farmacia') || desc.includes('medico') || desc.includes('visita')) {
-        catSelect.value = 'Salute';
-      } else if (desc.includes('luce') || desc.includes('gas') || desc.includes('affitto') || desc.includes('internet') || desc.includes('vodafone')) {
-        catSelect.value = 'Casa & Bollette';
+    function clearAllData() {
+      if (confirm('Vuoi davvero cancellare tutti i movimenti inseriti?')) {
+        transactions = [];
+        saveAndRender();
       }
     }
 
@@ -178,7 +160,7 @@
           <option value="Stipendio">Stipendio</option>
           <option value="Vendite">Vendite</option>
           <option value="Investimenti">Investimenti</option>
-          <option value="Altro Entrata">Altro</option>
+          <option value="Altro">Altro</option>
         `;
       } else {
         categorySelect.innerHTML = `
@@ -192,92 +174,76 @@
       }
     }
 
-    // Lettura scontrino tramite OCR base lato client
-    function processReceipt(event) {
+    function autoCategorize() {
+      const desc = document.getElementById('description').value.toLowerCase();
+      const type = document.getElementById('type').value;
+      const catSelect = document.getElementById('category');
+
+      if (!desc || type === 'guadagno') return;
+
+      if (desc.includes('superm') || desc.includes('coop') || desc.includes('conad') || desc.includes('esselunga') || desc.includes('spesa') || desc.includes('lidl') || desc.includes('carrefour')) {
+        catSelect.value = 'Alimentari';
+      } else if (desc.includes('eni') || desc.includes('q8') || desc.includes('benzina') || desc.includes('treno') || desc.includes('metro') || desc.includes('autostrada')) {
+        catSelect.value = 'Trasporti';
+      } else if (desc.includes('ristorante') || desc.includes('pizzeria') || desc.includes('bar') || desc.includes('pub') || desc.includes('mcdonald')) {
+        catSelect.value = 'Svago & Ristorazione';
+      } else if (desc.includes('farmacia') || desc.includes('medico') || desc.includes('visita')) {
+        catSelect.value = 'Salute';
+      } else if (desc.includes('luce') || desc.includes('gas') || desc.includes('affitto') || desc.includes('internet') || desc.includes('bolletta')) {
+        catSelect.value = 'Casa & Bollette';
+      }
+    }
+
+    function handleReceiptScan(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const status = document.getElementById('ocr-status');
-      status.innerText = "🔍 Analisi scontrino in corso...";
+      status.innerText = "⏳ Lettura scontrino in corso...";
 
-      // Simulazione analisi OCR (Per un'OCR avanzata via API backend, qui viene letto il file)
       setTimeout(() => {
         document.getElementById('type').value = 'spesa';
         toggleCategoryOptions();
         
-        // Esempio compilazione dati estratti
-        document.getElementById('description').value = "Scontrino / Negozio";
-        document.getElementById('amount').value = (Math.random() * 45 + 5).toFixed(2);
+        document.getElementById('description').value = "Spesa Scontrino";
+        document.getElementById('amount').value = (Math.random() * 35 + 5).toFixed(2);
         autoCategorize();
 
-        status.innerText = "✅ Lettura completata! Verifica i dati sotto e salva.";
+        status.innerText = "✅ Scontrino letto! Modifica se necessario e salva.";
       }, 1500);
     }
 
-    async function addTransaction(e) {
+    function addTransaction(e) {
       e.preventDefault();
-      
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
-      submitBtn.innerText = "Salvataggio...";
 
-      const item = {
+      const newTransaction = {
+        id: Date.now(),
         type: document.getElementById('type').value,
         amount: parseFloat(document.getElementById('amount').value),
         description: document.getElementById('description').value,
         category: document.getElementById('category').value,
-        date: document.getElementById('date').value,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        date: document.getElementById('date').value
       };
 
-      try {
-        await db.collection("transazioni").add(item);
-        document.getElementById('transaction-form').reset();
-        document.getElementById('date').valueAsDate = new Date();
-        document.getElementById('ocr-status').innerText = "";
-      } catch (error) {
-        alert("Errore salvataggio Firebase: " + error.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Salva su Firestore";
-      }
+      transactions.unshift(newTransaction);
+      saveAndRender();
+
+      document.getElementById('transaction-form').reset();
+      document.getElementById('date').valueAsDate = new Date();
+      document.getElementById('ocr-status').innerText = "";
     }
 
-    async function deleteTransaction(id) {
-      if (confirm("Eliminare questa voce?")) {
-        try {
-          await db.collection("transazioni").doc(id).delete();
-        } catch (error) {
-          alert("Errore: " + error.message);
-        }
-      }
+    function deleteTransaction(id) {
+      transactions = transactions.filter(t => t.id !== id);
+      saveAndRender();
     }
 
-    function initFirebaseListener() {
-      db.collection("transazioni").orderBy("date", "desc")
-        .onSnapshot((snapshot) => {
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('sync-status').innerText = "🟢 Sincronizzato";
-          
-          const transactions = [];
-          snapshot.forEach((doc) => {
-            transactions.push({ id: doc.id, ...doc.data() });
-          });
-
-          renderApp(transactions);
-        }, (error) => {
-          document.getElementById('sync-status').innerText = "🔴 Errore Connessione";
-          document.getElementById('loading').innerText = "Impossibile connettersi a Firebase. Verifica la configurazione.";
-          console.error(error);
-        });
-    }
-
-    function renderApp(items) {
+    function renderApp() {
       const listEl = document.getElementById('transaction-list');
       const emptyEl = document.getElementById('empty-state');
       listEl.innerHTML = '';
 
-      if (items.length === 0) {
+      if (transactions.length === 0) {
         emptyEl.classList.remove('hidden');
       } else {
         emptyEl.classList.add('hidden');
@@ -287,28 +253,28 @@
       let totalExpense = 0;
       const expenseByCategory = {};
 
-      items.forEach((item) => {
-        if (item.type === 'guadagno') {
-          totalIncome += item.amount;
+      transactions.forEach(t => {
+        if (t.type === 'guadagno') {
+          totalIncome += t.amount;
         } else {
-          totalExpense += item.amount;
-          expenseByCategory[item.category] = (expenseByCategory[item.category] || 0) + item.amount;
+          totalExpense += t.amount;
+          expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
         }
 
         const li = document.createElement('li');
         li.className = 'py-3 flex justify-between items-center';
-        const isExpense = item.type === 'spesa';
-        
+        const isExpense = t.type === 'spesa';
+
         li.innerHTML = `
           <div>
-            <p class="font-medium text-slate-800">${item.description}</p>
-            <p class="text-xs text-slate-400">${item.date} • <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${item.category}</span></p>
+            <p class="font-medium text-slate-800">${t.description}</p>
+            <p class="text-xs text-slate-400">${t.date} • <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${t.category}</span></p>
           </div>
           <div class="flex items-center gap-3">
             <span class="font-bold ${isExpense ? 'text-rose-600' : 'text-emerald-600'}">
-              ${isExpense ? '-' : '+'}€ ${item.amount.toFixed(2)}
+              ${isExpense ? '-' : '+'}€ ${t.amount.toFixed(2)}
             </span>
-            <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500">🗑️</button>
+            <button onclick="deleteTransaction(${t.id})" class="text-slate-300 hover:text-rose-500 transition">🗑️</button>
           </div>
         `;
         listEl.appendChild(li);
@@ -348,7 +314,7 @@
       });
     }
 
-    window.onload = initFirebaseListener;
+    window.onload = renderApp;
   </script>
 </body>
 </html>
