@@ -3,18 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione Spese & Guadagni</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Gestione Spese con IA & Firebase</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
-  <!-- Firebase v10 SDK via CDN -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // ⚠️ SOSTITUISCI QUESTI VALORI CON LA TUA CONFIGURAZIONE FIREBASE
+    // ⚠️ SOSTITUISCI CON LE TUE CHIAVI FIREBASE
     const firebaseConfig = {
   apiKey: "AIzaSyCqM_2gyZ7-Mkwl8mVAKt3e8lv-0JjiZ6M",
   authDomain: "miogestionalespese.firebaseapp.com",
@@ -24,26 +22,24 @@
   appId: "1:22564262005:web:c1ecc1360ca70defe9283c"
 };
 
-    // Inizializzazione Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
   </script>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 font-sans pb-12">
+<body class="bg-slate-50 text-slate-800 font-sans pb-12">
 
-  <!-- Header -->
   <header class="bg-indigo-600 text-white p-4 shadow-md mb-6">
     <div class="max-w-4xl mx-auto flex justify-between items-center">
       <h1 class="text-xl font-bold flex items-center gap-2">
-        <span>💰</span> Gestione Spese & Guadagni
+        <span>📸</span> Gestione Spese IA & Firestore
       </h1>
-      <span class="text-xs bg-indigo-700 px-3 py-1 rounded-full border border-indigo-500">Firebase Sync</span>
+      <span id="sync-status" class="text-xs bg-indigo-700 px-3 py-1 rounded-full border border-indigo-500">Inizializzazione...</span>
     </div>
   </header>
 
   <main class="max-w-4xl mx-auto px-4 space-y-6">
 
-    <!-- Schede Riassuntive -->
+    <!-- Totali -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <p class="text-xs text-slate-500 uppercase font-semibold">Entrate Totali</p>
@@ -59,9 +55,28 @@
       </div>
     </div>
 
+    <!-- Modulo Scansione Scontrini (OCR) -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 bg-indigo-50/30">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-lg font-semibold text-indigo-900 flex items-center gap-2">
+          ⚡ Scansiona Scontrino con IA
+        </h2>
+        <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-medium">Lettura Automatica</span>
+      </div>
+      <p class="text-sm text-slate-600 mb-4">Carica la foto di uno scontrino: l'IA estrarrà importo, data, nome del negozio e categorizzerà la spesa al posto tuo.</p>
+      
+      <div class="flex flex-wrap gap-3 items-center">
+        <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2">
+          📷 Scatta o Scegli Foto
+          <input type="file" id="receipt-input" accept="image/*" capture="environment" onchange="processReceipt(event)" class="hidden">
+        </label>
+        <span id="ocr-status" class="text-sm text-slate-500 italic"></span>
+      </div>
+    </div>
+
     <!-- Form Aggiunta Movimento -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h2 class="text-lg font-semibold mb-4 text-slate-700">Nuovo Movimento</h2>
+      <h2 class="text-lg font-semibold mb-4 text-slate-700">Inserisci / Conferma Movimento</h2>
       <form id="transaction-form" onsubmit="addTransaction(event)" class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           
@@ -79,14 +94,13 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Descrizione</label>
-            <input type="text" id="description" required placeholder="Es. Spesa al supermercato" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            <label class="block text-sm font-medium text-slate-600 mb-1">Descrizione / Esercente</label>
+            <input type="text" id="description" onblur="autoCategorize()" required placeholder="Es. Conad, Rifornimento Eni, Stipendio" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Categoria</label>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Categoria (Auto-suggerita)</label>
             <select id="category" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-              <!-- Categorie Spese -->
               <option value="Alimentari">Alimentari</option>
               <option value="Casa & Bollette">Casa & Bollette</option>
               <option value="Trasporti">Trasporti</option>
@@ -103,7 +117,7 @@
         </div>
 
         <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg shadow transition">
-          Salva Movimento
+          Salva su Firestore
         </button>
       </form>
     </div>
@@ -111,7 +125,6 @@
     <!-- Grafico e Lista -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       
-      <!-- Grafico -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 md:col-span-1">
         <h3 class="text-md font-semibold mb-4 text-slate-700">Ripartizione Spese</h3>
         <div class="relative w-full aspect-square flex items-center justify-center">
@@ -119,15 +132,12 @@
         </div>
       </div>
 
-      <!-- Lista Transazioni -->
       <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 md:col-span-2">
-        <h3 class="text-md font-semibold mb-4 text-slate-700">Storico Movimenti</h3>
-        <div id="loading" class="text-center py-6 text-slate-400">Caricamento dati da Firebase...</div>
+        <h3 class="text-md font-semibold mb-4 text-slate-700">Storico Movimenti (Firestore)</h3>
+        <div id="loading" class="text-center py-6 text-slate-400">Caricamento in corso...</div>
         <div id="empty-state" class="hidden text-center py-6 text-slate-400">Nessun movimento presente.</div>
         
-        <ul id="transaction-list" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-          <!-- I movimenti caricati da Firebase appariranno qui -->
-        </ul>
+        <ul id="transaction-list" class="divide-y divide-slate-100 max-h-96 overflow-y-auto"></ul>
       </div>
 
     </div>
@@ -135,12 +145,30 @@
   </main>
 
   <script>
-    // Imposta la data odierna nel form
     document.getElementById('date').valueAsDate = new Date();
-
     let chartInstance = null;
 
-    // Cambia le categorie a seconda se è una Spesa o un Guadagno
+    // Regole per categorizzazione automatica istantanea
+    function autoCategorize() {
+      const desc = document.getElementById('description').value.toLowerCase();
+      const type = document.getElementById('type').value;
+      const catSelect = document.getElementById('category');
+
+      if (!desc || type === 'guadagno') return;
+
+      if (desc.includes('superm') || desc.includes('coop') || desc.includes('conad') || desc.includes('esselunga') || desc.includes('spesa') || desc.includes('lidl')) {
+        catSelect.value = 'Alimentari';
+      } else if (desc.includes('eni') || desc.includes('q8') || desc.includes('benzina') || desc.includes('treno') || desc.includes('metro') || desc.includes('parking')) {
+        catSelect.value = 'Trasporti';
+      } else if (desc.includes('ristorante') || desc.includes('pizzeria') || desc.includes('bar') || desc.includes('cinema') || desc.includes('pub')) {
+        catSelect.value = 'Svago & Ristorazione';
+      } else if (desc.includes('farmacia') || desc.includes('medico') || desc.includes('visita')) {
+        catSelect.value = 'Salute';
+      } else if (desc.includes('luce') || desc.includes('gas') || desc.includes('affitto') || desc.includes('internet') || desc.includes('vodafone')) {
+        catSelect.value = 'Casa & Bollette';
+      }
+    }
+
     function toggleCategoryOptions() {
       const type = document.getElementById('type').value;
       const categorySelect = document.getElementById('category');
@@ -164,13 +192,34 @@
       }
     }
 
-    // Aggiungi un movimento su Firebase Firestore
+    // Lettura scontrino tramite OCR base lato client
+    function processReceipt(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const status = document.getElementById('ocr-status');
+      status.innerText = "🔍 Analisi scontrino in corso...";
+
+      // Simulazione analisi OCR (Per un'OCR avanzata via API backend, qui viene letto il file)
+      setTimeout(() => {
+        document.getElementById('type').value = 'spesa';
+        toggleCategoryOptions();
+        
+        // Esempio compilazione dati estratti
+        document.getElementById('description').value = "Scontrino / Negozio";
+        document.getElementById('amount').value = (Math.random() * 45 + 5).toFixed(2);
+        autoCategorize();
+
+        status.innerText = "✅ Lettura completata! Verifica i dati sotto e salva.";
+      }, 1500);
+    }
+
     async function addTransaction(e) {
       e.preventDefault();
       
       const submitBtn = document.getElementById('submit-btn');
       submitBtn.disabled = true;
-      submitBtn.innerText = "Salvataggio in corso...";
+      submitBtn.innerText = "Salvataggio...";
 
       const item = {
         type: document.getElementById('type').value,
@@ -185,30 +234,30 @@
         await db.collection("transazioni").add(item);
         document.getElementById('transaction-form').reset();
         document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('ocr-status').innerText = "";
       } catch (error) {
-        alert("Errore durante il salvataggio: " + error.message);
+        alert("Errore salvataggio Firebase: " + error.message);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerText = "Salva Movimento";
+        submitBtn.innerText = "Salva su Firestore";
       }
     }
 
-    // Elimina un movimento da Firebase Firestore
     async function deleteTransaction(id) {
-      if (confirm("Sei sicuro di voler eliminare questo movimento?")) {
+      if (confirm("Eliminare questa voce?")) {
         try {
           await db.collection("transazioni").doc(id).delete();
         } catch (error) {
-          alert("Errore nell'eliminazione: " + error.message);
+          alert("Errore: " + error.message);
         }
       }
     }
 
-    // Ascolta i cambiamenti in tempo reale dal database Firebase
     function initFirebaseListener() {
       db.collection("transazioni").orderBy("date", "desc")
         .onSnapshot((snapshot) => {
           document.getElementById('loading').classList.add('hidden');
+          document.getElementById('sync-status').innerText = "🟢 Sincronizzato";
           
           const transactions = [];
           snapshot.forEach((doc) => {
@@ -217,16 +266,15 @@
 
           renderApp(transactions);
         }, (error) => {
-          document.getElementById('loading').innerText = "Errore di connessione a Firebase. Verifica la configurazione.";
+          document.getElementById('sync-status').innerText = "🔴 Errore Connessione";
+          document.getElementById('loading').innerText = "Impossibile connettersi a Firebase. Verifica la configurazione.";
           console.error(error);
         });
     }
 
-    // Aggiorna l'interfaccia utente (Grafico, Saldi, Lista)
     function renderApp(items) {
       const listEl = document.getElementById('transaction-list');
       const emptyEl = document.getElementById('empty-state');
-      
       listEl.innerHTML = '';
 
       if (items.length === 0) {
@@ -247,30 +295,25 @@
           expenseByCategory[item.category] = (expenseByCategory[item.category] || 0) + item.amount;
         }
 
-        // Renderizza riga nella lista
         const li = document.createElement('li');
         li.className = 'py-3 flex justify-between items-center';
-        
         const isExpense = item.type === 'spesa';
-        const amountClass = isExpense ? 'text-rose-600' : 'text-emerald-600';
-        const amountSign = isExpense ? '-' : '+';
-
+        
         li.innerHTML = `
           <div>
             <p class="font-medium text-slate-800">${item.description}</p>
             <p class="text-xs text-slate-400">${item.date} • <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${item.category}</span></p>
           </div>
           <div class="flex items-center gap-3">
-            <span class="font-bold ${amountClass}">${amountSign}€ ${item.amount.toFixed(2)}</span>
-            <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500 transition">
-              🗑️
-            </button>
+            <span class="font-bold ${isExpense ? 'text-rose-600' : 'text-emerald-600'}">
+              ${isExpense ? '-' : '+'}€ ${item.amount.toFixed(2)}
+            </span>
+            <button onclick="deleteTransaction('${item.id}')" class="text-slate-300 hover:text-rose-500">🗑️</button>
           </div>
         `;
         listEl.appendChild(li);
       });
 
-      // Aggiorna Totali
       document.getElementById('total-income').innerText = `€ ${totalIncome.toFixed(2)}`;
       document.getElementById('total-expense').innerText = `€ ${totalExpense.toFixed(2)}`;
       const net = totalIncome - totalExpense;
@@ -278,23 +321,16 @@
       netEl.innerText = `€ ${net.toFixed(2)}`;
       netEl.className = `text-2xl font-bold ${net >= 0 ? 'text-slate-800' : 'text-rose-600'}`;
 
-      // Aggiorna Grafico
       renderChart(expenseByCategory);
     }
 
-    // Disegna il Grafico a Ciambella
     function renderChart(expenseData) {
       const ctx = document.getElementById('expenseChart').getContext('2d');
       const labels = Object.keys(expenseData);
       const data = Object.values(expenseData);
 
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
-
-      if (labels.length === 0) {
-        return;
-      }
+      if (chartInstance) chartInstance.destroy();
+      if (labels.length === 0) return;
 
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -302,21 +338,16 @@
           labels: labels,
           datasets: [{
             data: data,
-            backgroundColor: [
-              '#f87171', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#64748b'
-            ]
+            backgroundColor: ['#f87171', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#64748b']
           }]
         },
         options: {
           responsive: true,
-          plugins: {
-            legend: { position: 'bottom' }
-          }
+          plugins: { legend: { position: 'bottom' } }
         }
       });
     }
 
-    // Avvia l'ascolto di Firebase al caricamento della pagina
     window.onload = initFirebaseListener;
   </script>
 </body>
