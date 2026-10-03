@@ -1,320 +1,751 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" class="h-full">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione Spese & Guadagni con IA</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestore Finanze Multi-Conto & Scontrini AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ⚠️ INSERISCI QUI LE TUE CHIAVI DI FIREBASE
+        const firebaseConfig = {
+  apiKey: "AIzaSyCqM_2gyZ7-Mkwl8mVAKt3e8lv-0JjiZ6M",
+  authDomain: "miogestionalespese.firebaseapp.com",
+  projectId: "miogestionalespese",
+  storageBucket: "miogestionalespese.firebasestorage.app",
+  messagingSenderId: "22564262005",
+  appId: "1:22564262005:web:c1ecc1360ca70defe9283c"
+};
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        },
+                        rose: {
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+        }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 font-sans pb-12">
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200 flex flex-col justify-center">
 
-  <!-- Header -->
-  <header class="bg-indigo-600 text-white p-4 shadow-md mb-6">
-    <div class="max-w-4xl mx-auto flex justify-between items-center">
-      <h1 class="text-xl font-bold flex items-center gap-2">
-        <span>💰</span> Gestione Spese & Guadagni AI
-      </h1>
-      <button onclick="clearAllData()" class="text-xs bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg border border-indigo-500 transition">
-        Reset Dati
-      </button>
-    </div>
-  </header>
+<!-- SCHERMATA DI LOGIN -->
+<div id="loginSection" class="max-w-md w-full mx-auto px-4">
+    <div class="glass-panel p-8 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xl text-center space-y-6">
+        <div class="inline-flex p-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl mb-2">
+            <i data-lucide="lock" class="w-10 h-10"></i>
+        </div>
+        <div>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Area Riservata</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Accedi per gestire i tuoi conti personali</p>
+        </div>
 
-  <main class="max-w-4xl mx-auto px-4 space-y-6">
-
-    <!-- Schede Riassuntive -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <p class="text-xs text-slate-500 uppercase font-semibold">Entrate Totali</p>
-        <p id="total-income" class="text-2xl font-bold text-emerald-600">€ 0,00</p>
-      </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <p class="text-xs text-slate-500 uppercase font-semibold">Uscite Totali</p>
-        <p id="total-expense" class="text-2xl font-bold text-rose-600">€ 0,00</p>
-      </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <p class="text-xs text-slate-500 uppercase font-semibold">Saldo Netto</p>
-        <p id="net-balance" class="text-2xl font-bold text-slate-800">€ 0,00</p>
-      </div>
-    </div>
-
-    <!-- Sezione Scansione Scontrino con IA -->
-    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-md">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-lg font-semibold flex items-center gap-2">
-          <span>📷</span> Scansiona Scontrino (OCR & IA)
-        </h2>
-        <span class="text-xs bg-white/20 px-2 py-1 rounded text-white font-medium">Gemini AI</span>
-      </div>
-      <p class="text-sm opacity-90 mb-4">Fai una foto allo scontrino o caricane un'immagine per estrarre in automatico importo, descrizione e categoria.</p>
-      
-      <div class="flex flex-wrap gap-3 items-center">
-        <label class="cursor-pointer bg-white text-indigo-700 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-sm font-semibold transition shadow flex items-center gap-2">
-          <span>📤</span> Carica / Scatta Foto
-          <input type="file" id="receipt-file" accept="image/*" capture="environment" onchange="handleReceiptScan(event)" class="hidden">
-        </label>
-        <span id="ocr-status" class="text-sm italic font-medium"></span>
-      </div>
-    </div>
-
-    <!-- Form Aggiunta Movimento -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h2 class="text-lg font-semibold mb-4 text-slate-700">Nuovo Movimento</h2>
-      <form id="transaction-form" onsubmit="addTransaction(event)" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Tipo</label>
-            <select id="type" onchange="toggleCategoryOptions()" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-              <option value="spesa">Spesa (Uscita)</option>
-              <option value="guadagno">Guadagno (Entrata)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Importo (€)</label>
-            <input type="number" id="amount" step="0.01" min="0.01" required placeholder="0.00" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Descrizione</label>
-            <div class="relative">
-              <input type="text" id="description" onblur="autoCategorize()" required placeholder="Es. Conad, Rifornimento Eni..." class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-              <button type="button" onclick="autoCategorize()" class="absolute right-2 top-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2 py-1 rounded border border-indigo-200">
-                ✨ Categorizza
-              </button>
+        <form id="loginForm" class="space-y-4 text-left">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
+                <input type="email" id="loginEmail" required placeholder="nome@esempio.it" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
             </div>
-          </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Password</label>
+                <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+            </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Categoria</label>
-            <select id="category" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-              <option value="Alimentari">Alimentari</option>
-              <option value="Casa & Bollette">Casa & Bollette</option>
-              <option value="Trasporti">Trasporti</option>
-              <option value="Svago & Ristorazione">Svago & Ristorazione</option>
-              <option value="Salute">Salute</option>
-              <option value="Altro">Altro</option>
-            </select>
-          </div>
+            <p id="loginError" class="text-xs text-rose-500 font-medium hidden text-center"></p>
 
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-slate-600 mb-1">Data</label>
-            <input type="date" id="date" required class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-          </div>
+            <button type="submit" id="loginBtn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+                <i data-lucide="log-in" class="w-4 h-4"></i> Accedi
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- DASHBOARD PRINCIPALE (Nascosta prima del login) -->
+<div id="app" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 w-full">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+            <div class="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                <i data-lucide="wallet" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Finanze & Scontrini AI</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Gestione multi-conto (BBVA & Buddybank) e lettura scontrini</p>
+            </div>
         </div>
 
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg shadow transition">
-          Salva Movimento
-        </button>
-      </form>
-    </div>
-
-    <!-- Grafico e Lista -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 md:col-span-1">
-        <h3 class="text-md font-semibold mb-4 text-slate-700">Ripartizione Spese</h3>
-        <div class="relative w-full aspect-square flex items-center justify-center">
-          <canvas id="expenseChart"></canvas>
+        <div class="flex items-center gap-3 self-end md:self-auto">
+            <button id="themeToggleBtn" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+            </button>
+            <button id="exportBtn" class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium transition">
+                <i data-lucide="download" class="w-4 h-4"></i> Esporta JSON
+            </button>
+            <button id="logoutBtn" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-sm font-medium transition">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Esci
+            </button>
         </div>
-      </div>
+    </header>
 
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 md:col-span-2">
-        <h3 class="text-md font-semibold mb-4 text-slate-700">Storico Movimenti</h3>
-        <div id="empty-state" class="text-center py-8 text-slate-400">Nessun movimento presente. Aggiungine uno!</div>
-        
-        <ul id="transaction-list" class="divide-y divide-slate-100 max-h-96 overflow-y-auto"></ul>
-      </div>
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Patrimonio Totale</span>
+                <div class="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
+                    <i data-lucide="scale" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <p id="totalBalance" class="text-3xl font-bold mt-2">€ 0,00</p>
+            <p class="text-xs text-slate-400 mt-1">Somma dei due conti</p>
+        </div>
 
+        <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Totale Guadagni</span>
+                <div class="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <p id="totalIncome" class="text-3xl font-bold mt-2 text-emerald-600 dark:text-emerald-400">+€ 0,00</p>
+            <p class="text-xs text-emerald-500/80 mt-1">Entrate complessive</p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Totale Spese</span>
+                <div class="p-2.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl">
+                    <i data-lucide="trending-down" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <p id="totalExpenses" class="text-3xl font-bold mt-2 text-rose-600 dark:text-rose-400">-€ 0,00</p>
+            <p class="text-xs text-rose-500/80 mt-1">Uscite complessive</p>
+        </div>
     </div>
 
-  </main>
+    <!-- Main Content Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Form + OCR Scanner -->
+        <div class="lg:col-span-5 space-y-6">
+            <!-- Box Scansione Scontrino con AI -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-lg flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-amber-500"></i> Lettura Scontrino AI
+                    </h2>
+                    <span class="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">Gemini 3.1 Flash</span>
+                </div>
+                
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                    Scatta una foto o carica uno scontrino: l'intelligenza artificiale estrarrà data, importo e categoria.
+                </p>
 
-  <script>
-    document.getElementById('date').valueAsDate = new Date();
-    
-    // ARRAY DATI COMPLETAMENTE VUOTO ALL'INIZIO
-    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+                <div id="ocrDropzone" class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-full">
+                        <i data-lucide="camera" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Scatta foto o seleziona immagine</span>
+                        <p class="text-xs text-slate-400 mt-1">PNG, JPG, WEBP fino a 10MB</p>
+                    </div>
+                    <input type="file" id="receiptInput" accept="image/*" capture="environment" class="hidden">
+                </div>
+
+                <div id="ocrLoading" class="hidden mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3 text-amber-700 dark:text-amber-300">
+                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                    <span class="text-sm font-medium">Analisi scontrino in corso con Gemini AI...</span>
+                </div>
+
+                <div id="receiptPreviewContainer" class="hidden mt-4 relative">
+                    <img id="receiptPreview" src="" alt="Anteprima scontrino" class="w-full max-h-48 object-cover rounded-xl border border-slate-200 dark:border-slate-700">
+                    <button id="removeReceiptBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/70 text-white rounded-full hover:bg-slate-900 transition">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Nuova Operazione / Trasferimento -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-500"></i> Nuova Operazione
+                </h2>
+
+                <form id="transactionForm" class="space-y-4">
+                    <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs">
+                        <button type="button" id="typeExpenseBtn" class="py-2 font-medium rounded-lg bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white transition flex items-center justify-center gap-1">
+                            <i data-lucide="minus-circle" class="w-3.5 h-3.5 text-rose-500"></i> Spesa
+                        </button>
+                        <button type="button" id="typeIncomeBtn" class="py-2 font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center gap-1">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-emerald-500"></i> Guadagno
+                        </button>
+                        <button type="button" id="typeTransferBtn" class="py-2 font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center gap-1">
+                            <i data-lucide="arrow-right-left" class="w-3.5 h-3.5 text-blue-500"></i> Sposta
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="transType" value="expense">
+
+                    <div id="singleAccountSection">
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Conto di Riferimento</label>
+                        <select id="accountSelect" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="bbva">BBVA</option>
+                            <option value="buddybank">Unicredit Buddybank</option>
+                        </select>
+                    </div>
+
+                    <div id="transferAccountsSection" class="hidden grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Da Conto</label>
+                            <select id="fromAccountSelect" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="bbva">BBVA</option>
+                                <option value="buddybank">Buddybank</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">A Conto</label>
+                            <select id="toAccountSelect" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="buddybank">Buddybank</option>
+                                <option value="bbva">BBVA</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Importo (€)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-semibold">€</span>
+                            <input type="number" step="0.01" min="0.01" id="transAmount" required placeholder="0.00" class="w-full pl-8 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-bold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Descrizione</label>
+                        <div class="relative">
+                            <input type="text" id="transDescription" required placeholder="Es. Spesa, Stipendio, Giroconto..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm pr-10">
+                            <button type="button" id="aiCategoryBtn" title="Categorizza con AI" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition">
+                                <i data-lucide="wand-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="categoryAndDateGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div id="categoryContainer">
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Categoria</label>
+                            <select id="transCategory" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Data</label>
+                            <input type="date" id="transDate" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4"></i> Salva Transazione
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Grafici, Saldi Conti e Storico -->
+        <div class="lg:col-span-7 space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl font-bold text-xs">
+                            BBVA
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Saldo BBVA</p>
+                            <p id="bbvaBalance" class="text-xl font-bold">€ 0,00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl font-bold text-xs">
+                            BUDDY
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Saldo Buddybank</p>
+                            <p id="buddyBalance" class="text-xl font-bold">€ 0,00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-lg flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="w-5 h-5 text-teal-500"></i> Ripartizione Spese
+                    </h2>
+                    <span class="text-xs text-slate-400">Visualizzazione per Categoria</span>
+                </div>
+                <div class="h-64 relative flex items-center justify-center">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                    <h2 class="font-semibold text-lg flex items-center gap-2">
+                        <i data-lucide="list-filter" class="w-5 h-5 text-blue-500"></i> Storico Movimenti
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <select id="filterType" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none">
+                            <option value="all">Tutti i movimenti</option>
+                            <option value="expense">Solo Spese</option>
+                            <option value="income">Solo Guadagni</option>
+                            <option value="transfer">Solo Trasferimenti</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-400 uppercase">
+                                <th class="py-3 px-2">Data</th>
+                                <th class="py-3 px-2">Descrizione</th>
+                                <th class="py-3 px-2">Conto</th>
+                                <th class="py-3 px-2">Categoria</th>
+                                <th class="py-3 px-2 text-right">Importo</th>
+                                <th class="py-3 px-2 text-center">Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionList" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        </tbody>
+                    </table>
+                    <div id="emptyState" class="hidden py-8 text-center text-slate-400 text-sm">
+                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        Nessuna transazione trovata.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const EXPENSE_CATEGORIES = [
+        "Alimentari & Spesa", "Ristoranti & Bar", "Trasporti & Carburante",
+        "Casa & Bollette", "Svago & Intrattenimento", "Salute & Benessere",
+        "Shopping & Abbigliamento", "Tecnologia", "Altro Spese"
+    ];
+
+    const INCOME_CATEGORIES = [
+        "Stipendio", "Freelance & Progetti", "Investimenti", 
+        "Regali & Bonus", "Vendite Usato", "Altro Entrate"
+    ];
+
+    const GEMINI_API_KEY = "";
+
+    let transactions = [];
     let chartInstance = null;
+    let unsubscribeFirestore = null;
 
-    function saveAndRender() {
-      localStorage.setItem('transactions', JSON.stringify(transactions));
-      renderApp();
+    // DOM Elements
+    const loginSection = document.getElementById('loginSection');
+    const appSection = document.getElementById('app');
+    const loginForm = document.getElementById('loginForm');
+    const loginEmailInput = document.getElementById('loginEmail');
+    const loginPasswordInput = document.getElementById('loginPassword');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const totalBalanceEl = document.getElementById('totalBalance');
+    const totalIncomeEl = document.getElementById('totalIncome');
+    const totalExpensesEl = document.getElementById('totalExpenses');
+    const bbvaBalanceEl = document.getElementById('bbvaBalance');
+    const buddyBalanceEl = document.getElementById('buddyBalance');
+
+    const transactionForm = document.getElementById('transactionForm');
+    const transTypeInput = document.getElementById('transType');
+    const transAmountInput = document.getElementById('transAmount');
+    const transDescInput = document.getElementById('transDescription');
+    const transCategorySelect = document.getElementById('transCategory');
+    const transDateInput = document.getElementById('transDate');
+    const accountSelect = document.getElementById('accountSelect');
+    const fromAccountSelect = document.getElementById('fromAccountSelect');
+    const toAccountSelect = document.getElementById('toAccountSelect');
+
+    const singleAccountSection = document.getElementById('singleAccountSection');
+    const transferAccountsSection = document.getElementById('transferAccountsSection');
+    const categoryContainer = document.getElementById('categoryContainer');
+    const submitBtn = document.getElementById('submitBtn');
+
+    const typeExpenseBtn = document.getElementById('typeExpenseBtn');
+    const typeIncomeBtn = document.getElementById('typeIncomeBtn');
+    const typeTransferBtn = document.getElementById('typeTransferBtn');
+
+    const transactionListEl = document.getElementById('transactionList');
+    const emptyStateEl = document.getElementById('emptyState');
+    const filterTypeSelect = document.getElementById('filterType');
+
+    const ocrDropzone = document.getElementById('ocrDropzone');
+    const receiptInput = document.getElementById('receiptInput');
+    const ocrLoading = document.getElementById('ocrLoading');
+    const receiptPreviewContainer = document.getElementById('receiptPreviewContainer');
+    const receiptPreview = document.getElementById('receiptPreview');
+    const removeReceiptBtn = document.getElementById('removeReceiptBtn');
+    const aiCategoryBtn = document.getElementById('aiCategoryBtn');
+
+    // --- GESTIONE STATO AUTENTICAZIONE ---
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            loginSection.classList.add('hidden');
+            appSection.classList.remove('hidden');
+            document.body.classList.remove('flex', 'flex-col', 'justify-center');
+            initApp();
+        } else {
+            appSection.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+            document.body.classList.add('flex', 'flex-col', 'justify-center');
+            if (unsubscribeFirestore) unsubscribeFirestore();
+        }
+    });
+
+    // Login Event
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+        try {
+            await auth.signInWithEmailAndPassword(loginEmailInput.value, loginPasswordInput.value);
+            loginForm.reset();
+        } catch (error) {
+            loginError.innerText = "Credenziali non valide. Riprova.";
+            loginError.classList.remove('hidden');
+        }
+    });
+
+    // Logout Event
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut();
+    });
+
+    function initApp() {
+        lucide.createIcons();
+        transDateInput.value = new Date().toISOString().split('T')[0];
+        updateCategoryOptions('expense');
+
+        if (unsubscribeFirestore) unsubscribeFirestore();
+
+        unsubscribeFirestore = db.collection("transazioni").orderBy("date", "desc")
+          .onSnapshot((snapshot) => {
+              transactions = [];
+              snapshot.forEach((doc) => {
+                  transactions.push({ id: doc.id, ...doc.data() });
+              });
+              renderApp();
+          }, (error) => {
+              console.error("Errore sincronizzazione Firebase:", error);
+          });
     }
 
-    function clearAllData() {
-      if (confirm('Vuoi davvero cancellare tutti i movimenti inseriti?')) {
-        transactions = [];
-        saveAndRender();
-      }
+    // --- GESTIONE TEMA ---
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+
+    themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        updateThemeIcon();
+        if (chartInstance) renderChart();
+    });
+
+    function updateThemeIcon() {
+        const isDark = document.documentElement.classList.contains('dark');
+        themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        lucide.createIcons();
     }
 
-    function toggleCategoryOptions() {
-      const type = document.getElementById('type').value;
-      const categorySelect = document.getElementById('category');
-      
-      if (type === 'guadagno') {
-        categorySelect.innerHTML = `
-          <option value="Stipendio">Stipendio</option>
-          <option value="Vendite">Vendite</option>
-          <option value="Investimenti">Investimenti</option>
-          <option value="Altro">Altro</option>
-        `;
-      } else {
-        categorySelect.innerHTML = `
-          <option value="Alimentari">Alimentari</option>
-          <option value="Casa & Bollette">Casa & Bollette</option>
-          <option value="Trasporti">Trasporti</option>
-          <option value="Svago & Ristorazione">Svago & Ristorazione</option>
-          <option value="Salute">Salute</option>
-          <option value="Altro">Altro</option>
-        `;
-      }
+    // --- SELEZIONE TIPO OPERAZIONE ---
+    typeExpenseBtn.addEventListener('click', () => setType('expense'));
+    typeIncomeBtn.addEventListener('click', () => setType('income'));
+    typeTransferBtn.addEventListener('click', () => setType('transfer'));
+
+    function setType(type) {
+        transTypeInput.value = type;
+        typeExpenseBtn.className = "py-2 font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center gap-1";
+        typeIncomeBtn.className = "py-2 font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center gap-1";
+        typeTransferBtn.className = "py-2 font-medium rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition flex items-center justify-center gap-1";
+
+        const activeClass = "py-2 font-medium rounded-lg bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white transition flex items-center justify-center gap-1";
+
+        if (type === 'expense') {
+            typeExpenseBtn.className = activeClass;
+            singleAccountSection.classList.remove('hidden');
+            transferAccountsSection.classList.add('hidden');
+            categoryContainer.classList.remove('hidden');
+            submitBtn.className = "w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition flex items-center justify-center gap-2";
+            updateCategoryOptions('expense');
+        } else if (type === 'income') {
+            typeIncomeBtn.className = activeClass;
+            singleAccountSection.classList.remove('hidden');
+            transferAccountsSection.classList.add('hidden');
+            categoryContainer.classList.remove('hidden');
+            submitBtn.className = "w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-sm transition flex items-center justify-center gap-2";
+            updateCategoryOptions('income');
+        } else if (type === 'transfer') {
+            typeTransferBtn.className = activeClass;
+            singleAccountSection.classList.add('hidden');
+            transferAccountsSection.classList.remove('hidden');
+            categoryContainer.classList.add('hidden');
+            transDescInput.value = "Trasferimento Fondi";
+            submitBtn.className = "w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-sm transition flex items-center justify-center gap-2";
+        }
     }
 
-    function autoCategorize() {
-      const desc = document.getElementById('description').value.toLowerCase();
-      const type = document.getElementById('type').value;
-      const catSelect = document.getElementById('category');
-
-      if (!desc || type === 'guadagno') return;
-
-      if (desc.includes('superm') || desc.includes('coop') || desc.includes('conad') || desc.includes('esselunga') || desc.includes('spesa') || desc.includes('lidl') || desc.includes('carrefour')) {
-        catSelect.value = 'Alimentari';
-      } else if (desc.includes('eni') || desc.includes('q8') || desc.includes('benzina') || desc.includes('treno') || desc.includes('metro') || desc.includes('autostrada')) {
-        catSelect.value = 'Trasporti';
-      } else if (desc.includes('ristorante') || desc.includes('pizzeria') || desc.includes('bar') || desc.includes('pub') || desc.includes('mcdonald')) {
-        catSelect.value = 'Svago & Ristorazione';
-      } else if (desc.includes('farmacia') || desc.includes('medico') || desc.includes('visita')) {
-        catSelect.value = 'Salute';
-      } else if (desc.includes('luce') || desc.includes('gas') || desc.includes('affitto') || desc.includes('internet') || desc.includes('bolletta')) {
-        catSelect.value = 'Casa & Bollette';
-      }
+    function updateCategoryOptions(type) {
+        const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+        transCategorySelect.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
     }
 
-    function handleReceiptScan(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    fromAccountSelect.addEventListener('change', () => {
+        toAccountSelect.value = fromAccountSelect.value === 'bbva' ? 'buddybank' : 'bbva';
+    });
 
-      const status = document.getElementById('ocr-status');
-      status.innerText = "⏳ Lettura scontrino in corso...";
+    toAccountSelect.addEventListener('change', () => {
+        fromAccountSelect.value = toAccountSelect.value === 'bbva' ? 'buddybank' : 'bbva';
+    });
 
-      setTimeout(() => {
-        document.getElementById('type').value = 'spesa';
-        toggleCategoryOptions();
-        
-        document.getElementById('description').value = "Spesa Scontrino";
-        document.getElementById('amount').value = (Math.random() * 35 + 5).toFixed(2);
-        autoCategorize();
+    // --- SALVATAGGIO TRANSAZIONE ---
+    transactionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-        status.innerText = "✅ Scontrino letto! Modifica se necessario e salva.";
-      }, 1500);
+        const type = transTypeInput.value;
+        let newTrans = {
+            type: type,
+            amount: parseFloat(transAmountInput.value),
+            description: transDescInput.value.trim(),
+            date: transDateInput.value,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (type === 'transfer') {
+            const fromAcc = fromAccountSelect.value;
+            const toAcc = toAccountSelect.value;
+
+            if (fromAcc === toAcc) {
+                alert("I due conti non possono coincidere.");
+                return;
+            }
+
+            newTrans.fromAccount = fromAcc;
+            newTrans.toAccount = toAcc;
+            newTrans.category = "Giroconto";
+        } else {
+            newTrans.account = accountSelect.value;
+            newTrans.category = transCategorySelect.value;
+        }
+
+        try {
+            await db.collection("transazioni").add(newTrans);
+            transAmountInput.value = '';
+            transDescInput.value = '';
+            receiptPreviewContainer.classList.add('hidden');
+        } catch (error) {
+            alert("Errore salvataggio: " + error.message);
+        }
+    });
+
+    // --- ELIMINAZIONE TRANSAZIONE ---
+    async function deleteTransaction(id) {
+        if (confirm("Sei sicuro di voler eliminare questo movimento?")) {
+            try {
+                await db.collection("transazioni").doc(id).delete();
+            } catch (error) {
+                alert("Errore eliminazione: " + error.message);
+            }
+        }
     }
 
-    function addTransaction(e) {
-      e.preventDefault();
-
-      const newTransaction = {
-        id: Date.now(),
-        type: document.getElementById('type').value,
-        amount: parseFloat(document.getElementById('amount').value),
-        description: document.getElementById('description').value,
-        category: document.getElementById('category').value,
-        date: document.getElementById('date').value
-      };
-
-      transactions.unshift(newTransaction);
-      saveAndRender();
-
-      document.getElementById('transaction-form').reset();
-      document.getElementById('date').valueAsDate = new Date();
-      document.getElementById('ocr-status').innerText = "";
-    }
-
-    function deleteTransaction(id) {
-      transactions = transactions.filter(t => t.id !== id);
-      saveAndRender();
-    }
+    // --- RENDERING APP & CHARTS ---
+    filterTypeSelect.addEventListener('change', renderApp);
 
     function renderApp() {
-      const listEl = document.getElementById('transaction-list');
-      const emptyEl = document.getElementById('empty-state');
-      listEl.innerHTML = '';
+        const filter = filterTypeSelect.value;
+        const filteredTrans = transactions.filter(t => filter === 'all' || t.type === filter);
 
-      if (transactions.length === 0) {
-        emptyEl.classList.remove('hidden');
-      } else {
-        emptyEl.classList.add('hidden');
-      }
+        let incomeTotal = 0;
+        let expenseTotal = 0;
+        let bbvaBalance = 0;
+        let buddyBalance = 0;
 
-      let totalIncome = 0;
-      let totalExpense = 0;
-      const expenseByCategory = {};
+        transactions.forEach(t => {
+            if (t.type === 'income') {
+                incomeTotal += t.amount;
+                if (t.account === 'bbva') bbvaBalance += t.amount;
+                if (t.account === 'buddybank') buddyBalance += t.amount;
+            } else if (t.type === 'expense') {
+                expenseTotal += t.amount;
+                if (t.account === 'bbva') bbvaBalance -= t.amount;
+                if (t.account === 'buddybank') buddyBalance -= t.amount;
+            } else if (t.type === 'transfer') {
+                if (t.fromAccount === 'bbva') bbvaBalance -= t.amount;
+                if (t.fromAccount === 'buddybank') buddyBalance -= t.amount;
+                if (t.toAccount === 'bbva') bbvaBalance += t.amount;
+                if (t.toAccount === 'buddybank') buddyBalance += t.amount;
+            }
+        });
 
-      transactions.forEach(t => {
-        if (t.type === 'guadagno') {
-          totalIncome += t.amount;
+        const totalBalance = bbvaBalance + buddyBalance;
+
+        totalBalanceEl.innerText = `€ ${totalBalance.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+        totalIncomeEl.innerText = `+€ ${incomeTotal.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+        totalExpensesEl.innerText = `-€ ${expenseTotal.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+
+        bbvaBalanceEl.innerText = `€ ${bbvaBalance.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+        buddyBalanceEl.innerText = `€ ${buddyBalance.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+
+        transactionListEl.innerHTML = '';
+        if (filteredTrans.length === 0) {
+            emptyStateEl.classList.remove('hidden');
         } else {
-          totalExpense += t.amount;
-          expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
+            emptyStateEl.classList.add('hidden');
+            filteredTrans.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition";
+
+                let accountBadge = "";
+                let amountText = "";
+                let amountColor = "";
+
+                if (t.type === 'expense') {
+                    accountBadge = `<span class="uppercase font-semibold text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700">${t.account || 'N/A'}</span>`;
+                    amountText = `-€ ${t.amount.toFixed(2)}`;
+                    amountColor = "text-rose-500";
+                } else if (t.type === 'income') {
+                    accountBadge = `<span class="uppercase font-semibold text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700">${t.account || 'N/A'}</span>`;
+                    amountText = `+€ ${t.amount.toFixed(2)}`;
+                    amountColor = "text-emerald-500";
+                } else if (t.type === 'transfer') {
+                    accountBadge = `<span class="uppercase font-semibold text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">${t.fromAccount} ➔ ${t.toAccount}</span>`;
+                    amountText = `€ ${t.amount.toFixed(2)}`;
+                    amountColor = "text-blue-500";
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-2 text-slate-500 dark:text-slate-400 text-xs">${t.date}</td>
+                    <td class="py-3 px-2 font-medium text-slate-800 dark:text-slate-200">${t.description}</td>
+                    <td class="py-3 px-2">${accountBadge}</td>
+                    <td class="py-3 px-2">
+                        <span class="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            ${t.category || 'Giroconto'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-2 text-right font-bold ${amountColor}">
+                        ${amountText}
+                    </td>
+                    <td class="py-3 px-2 text-center">
+                        <button onclick="deleteTransaction('${t.id}')" class="p-1 text-slate-400 hover:text-rose-500 rounded transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                transactionListEl.appendChild(tr);
+            });
         }
-
-        const li = document.createElement('li');
-        li.className = 'py-3 flex justify-between items-center';
-        const isExpense = t.type === 'spesa';
-
-        li.innerHTML = `
-          <div>
-            <p class="font-medium text-slate-800">${t.description}</p>
-            <p class="text-xs text-slate-400">${t.date} • <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${t.category}</span></p>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="font-bold ${isExpense ? 'text-rose-600' : 'text-emerald-600'}">
-              ${isExpense ? '-' : '+'}€ ${t.amount.toFixed(2)}
-            </span>
-            <button onclick="deleteTransaction(${t.id})" class="text-slate-300 hover:text-rose-500 transition">🗑️</button>
-          </div>
-        `;
-        listEl.appendChild(li);
-      });
-
-      document.getElementById('total-income').innerText = `€ ${totalIncome.toFixed(2)}`;
-      document.getElementById('total-expense').innerText = `€ ${totalExpense.toFixed(2)}`;
-      const net = totalIncome - totalExpense;
-      const netEl = document.getElementById('net-balance');
-      netEl.innerText = `€ ${net.toFixed(2)}`;
-      netEl.className = `text-2xl font-bold ${net >= 0 ? 'text-slate-800' : 'text-rose-600'}`;
-
-      renderChart(expenseByCategory);
+        lucide.createIcons();
+        renderChart();
     }
 
-    function renderChart(expenseData) {
-      const ctx = document.getElementById('expenseChart').getContext('2d');
-      const labels = Object.keys(expenseData);
-      const data = Object.values(expenseData);
+    function renderChart() {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const expenses = transactions.filter(t => t.type === 'expense');
 
-      if (chartInstance) chartInstance.destroy();
-      if (labels.length === 0) return;
+        const categoryTotals = {};
+        expenses.forEach(t => {
+            categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+        });
 
-      chartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: ['#f87171', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#64748b']
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
-        }
-      });
+        const labels = Object.keys(categoryTotals);
+        const dataValues = Object.values(categoryTotals);
+
+        if (chartInstance) chartInstance.destroy();
+        if (labels.length === 0) return;
+
+        const isDark = document.documentElement.classList.contains('dark');
+
+        chartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: [
+                        '#10b981', '#3b82f6', '#f59e0b', '#ec4899', 
+                        '#8b5cf6', '#06b6d4', '#f43f5e', '#64748b'
+                    ],
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1e293b' : '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: isDark ? '#cbd5e1' : '#334155',
+                            font: { family: 'Inter', size: 11 }
+                        }
+                    }
+                }
+            }
+        });
     }
 
-    window.onload = renderApp;
-  </script>
+    // Export JSON
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `finanze_backup_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    });
+</script>
 </body>
 </html>
