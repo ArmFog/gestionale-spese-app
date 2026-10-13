@@ -21,13 +21,13 @@
     <script>
         // ⚠️ INSERISCI QUI LE TUE CHIAVI DI FIREBASE
         const firebaseConfig = {
-  apiKey: "AIzaSyCqM_2gyZ7-Mkwl8mVAKt3e8lv-0JjiZ6M",
-  authDomain: "miogestionalespese.firebaseapp.com",
-  projectId: "miogestionalespese",
-  storageBucket: "miogestionalespese.firebasestorage.app",
-  messagingSenderId: "22564262005",
-  appId: "1:22564262005:web:c1ecc1360ca70defe9283c"
-};
+          apiKey: "AIzaSyCqM_2gyZ7-Mkwl8mVAKt3e8lv-0JjiZ6M",
+          authDomain: "miogestionalespese.firebaseapp.com",
+          projectId: "miogestionalespese",
+          storageBucket: "miogestionalespese.firebasestorage.app",
+          messagingSenderId: "22564262005",
+          appId: "1:22564262005:web:c1ecc1360ca70defe9283c"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -187,8 +187,6 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <!-- Form + OCR Scanner -->
         <div class="lg:col-span-5 space-y-6">
-            
-
             <!-- Form Nuova Operazione / Trasferimento -->
             <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
                 <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -253,7 +251,6 @@
                         <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Descrizione</label>
                         <div class="relative">
                             <input type="text" id="transDescription" required placeholder="Es. Spesa, Stipendio, Giroconto..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm pr-10">
-                            
                         </div>
                     </div>
 
@@ -341,41 +338,80 @@
                 </div>
             </div>
 
-            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                    <h2 class="font-semibold text-lg flex items-center gap-2">
-                        <i data-lucide="list-filter" class="w-5 h-5 text-blue-500"></i> Storico Movimenti
-                    </h2>
-                    <div class="flex items-center gap-2">
-                        <select id="filterType" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none">
-                            <option value="all">Tutti i movimenti</option>
-                            <option value="expense">Solo Spese</option>
-                            <option value="income">Solo Guadagni</option>
-                            <option value="transfer">Solo Trasferimenti</option>
-                        </select>
+            <!-- SEZIONE: CONSULTAZIONE ENTRATE E USCITE CON FILTRO DATA -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+                <h2 class="font-semibold text-lg flex items-center gap-2">
+                    <i data-lucide="calendar-range" class="w-5 h-5 text-emerald-500"></i> Consultazione Entrate e Uscite per Periodo
+                </h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Da Giorno</label>
+                        <input type="date" id="filterStartDate" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">A Giorno</label>
+                        <input type="date" id="filterEndDate" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <button id="applyDateFilterBtn" class="w-full py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white font-medium rounded-xl text-sm transition flex items-center justify-center gap-2">
+                            <i data-lucide="filter" class="w-4 h-4"></i> Filtra Periodo
+                        </button>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead>
-                            <tr class="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-400 uppercase">
-                                <th class="py-3 px-2">Data</th>
-                                <th class="py-3 px-2">Descrizione</th>
-                                <th class="py-3 px-2">Conto</th>
-                                <th class="py-3 px-2">Categoria</th>
-                                <th class="py-3 px-2 text-right">Importo</th>
-                                <th class="py-3 px-2 text-center">Azione</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionList" class="divide-y divide-slate-100 dark:divide-slate-800/60">
-                        </tbody>
-                    </table>
-                    <div id="emptyState" class="hidden py-8 text-center text-slate-400 text-sm">
-                        <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                        Nessuna transazione trovata.
+                <!-- Box Risultati Filtro Data -->
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <div class="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                        <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Entrate nel periodo</span>
+                        <p id="periodIncome" class="text-lg font-bold text-emerald-600 dark:text-emerald-400">+€ 0,00</p>
+                    </div>
+                    <div class="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                        <span class="text-xs text-rose-600 dark:text-rose-400 font-medium">Uscite nel periodo</span>
+                        <p id="periodExpense" class="text-lg font-bold text-rose-600 dark:text-rose-400">-€ 0,00</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- STORICO MOVIMENTI A TENDINA (COLLASSABILE) -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <details open class="group">
+                    <summary class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer list-none select-none">
+                        <h2 class="font-semibold text-lg flex items-center gap-2">
+                            <i data-lucide="list-filter" class="w-5 h-5 text-blue-500"></i> Storico Movimenti
+                            <span class="text-xs text-slate-400 font-normal ml-2">(clicca per aprire/chiudere)</span>
+                        </h2>
+                        <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                            <select id="filterType" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none">
+                                <option value="all">Tutti i movimenti</option>
+                                <option value="expense">Solo Spese</option>
+                                <option value="income">Solo Guadagni</option>
+                                <option value="transfer">Solo Trasferimenti</option>
+                            </select>
+                        </div>
+                    </summary>
+
+                    <div class="overflow-x-auto mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-400 uppercase">
+                                    <th class="py-3 px-2">Data</th>
+                                    <th class="py-3 px-2">Descrizione</th>
+                                    <th class="py-3 px-2">Conto</th>
+                                    <th class="py-3 px-2">Categoria</th>
+                                    <th class="py-3 px-2 text-right">Importo</th>
+                                    <th class="py-3 px-2 text-center">Azione</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionList" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                            </tbody>
+                        </table>
+                        <div id="emptyState" class="hidden py-8 text-center text-slate-400 text-sm">
+                            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                            Nessuna transazione trovata.
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </div>
@@ -401,7 +437,6 @@
         "Stipendio", "Freelance & Progetti", "Investimenti", 
         "Regali & Bonus", "Vendite Usato", "Altro Entrate"
     ];
-
 
     let transactions = [];
     let chartInstance = null;
@@ -449,7 +484,12 @@
     const emptyStateEl = document.getElementById('emptyState');
     const filterTypeSelect = document.getElementById('filterType');
 
-    
+    // Filtri Data
+    const filterStartDateEl = document.getElementById('filterStartDate');
+    const filterEndDateEl = document.getElementById('filterEndDate');
+    const applyDateFilterBtn = document.getElementById('applyDateFilterBtn');
+    const periodIncomeEl = document.getElementById('periodIncome');
+    const periodExpenseEl = document.getElementById('periodExpense');
 
     // --- GESTIONE STATO AUTENTICAZIONE ---
     auth.onAuthStateChanged((user) => {
@@ -486,7 +526,17 @@
 
     function initApp() {
         lucide.createIcons();
-        transDateInput.value = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        transDateInput.value = todayStr;
+        
+        // Imposta default filtri data (es. ultimo mese o mese corrente)
+        if (!filterStartDateEl.value) {
+            const dateObj = new Date();
+            dateObj.setDate(1); // Primo del mese
+            filterStartDateEl.value = dateObj.toISOString().split('T')[0];
+            filterEndDateEl.value = todayStr;
+        }
+
         updateCategoryOptions('expense');
 
         if (unsubscribeFirestore) unsubscribeFirestore();
@@ -613,10 +663,20 @@
 
     // --- RENDERING APP & CHARTS ---
     filterTypeSelect.addEventListener('change', renderApp);
+    applyDateFilterBtn.addEventListener('click', renderApp);
 
     function renderApp() {
         const filter = filterTypeSelect.value;
-        const filteredTrans = transactions.filter(t => filter === 'all' || t.type === filter);
+        const startDate = filterStartDateEl.value;
+        const endDate = filterEndDateEl.value;
+
+        // Filtraggio transazioni per lo storico e la tabella basato su tipo e date
+        const filteredTrans = transactions.filter(t => {
+            const matchType = (filter === 'all' || t.type === filter);
+            const matchStartDate = (!startDate || t.date >= startDate);
+            const matchEndDate = (!endDate || t.date <= endDate);
+            return matchType && matchStartDate && matchEndDate;
+        });
 
         let incomeTotal = 0;
         let expenseTotal = 0;
@@ -639,13 +699,11 @@
                 if (t.account === 'bnl_ana') bnlAnaBalance -= t.amount;
                 if (t.account === 'buddybank_ana') buddyAnaBalance -= t.amount;
             } else if (t.type === 'transfer') {
-                // Sottrai dal conto di origine
                 if (t.fromAccount === 'bbva' || t.fromAccount === 'bbva_armi') bbvaBalance -= t.amount;
                 if (t.fromAccount === 'buddybank' || t.fromAccount === 'buddybank_armi') buddyBalance -= t.amount;
                 if (t.fromAccount === 'bnl_ana') bnlAnaBalance -= t.amount;
                 if (t.fromAccount === 'buddybank_ana') buddyAnaBalance -= t.amount;
 
-                // Aggiungi al conto di destinazione
                 if (t.toAccount === 'bbva' || t.toAccount === 'bbva_armi') bbvaBalance += t.amount;
                 if (t.toAccount === 'buddybank' || t.toAccount === 'buddybank_armi') buddyBalance += t.amount;
                 if (t.toAccount === 'bnl_ana') bnlAnaBalance += t.amount;
@@ -668,6 +726,21 @@
         bnlAnaBalanceEl.innerText = `€ ${bnlAnaBalance.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
         buddyAnaBalanceEl.innerText = `€ ${buddyAnaBalance.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
 
+        // Calcolo entrate e uscite per intervallo di date selezionato
+        let periodInc = 0;
+        let periodExp = 0;
+
+        transactions.forEach(t => {
+            if ((!startDate || t.date >= startDate) && (!endDate || t.date <= endDate)) {
+                if (t.type === 'income') periodInc += t.amount;
+                if (t.type === 'expense') periodExp += t.amount;
+            }
+        });
+
+        periodIncomeEl.innerText = `+€ ${periodInc.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+        periodExpenseEl.innerText = `-€ ${periodExp.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+
+        // Rendering Lista Tabella Storico
         transactionListEl.innerHTML = '';
         if (filteredTrans.length === 0) {
             emptyStateEl.classList.remove('hidden');
